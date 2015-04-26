@@ -10,10 +10,24 @@
 # (4) ENSURE ALL FILES ARE IN THE SAME DIRECTORY AS THE SCRIPT
 
 from __future__ import print_function
-from os import getcwd
-from os.path import isfile
 from sys import exit, path
 
+def os_get_cwd():
+    ''' None -> str
+    '''
+    from os import getcwd
+    return getcwd()
+    
+def os_find_file(filename, filetype):
+    ''' str, str -> bool
+    Returns whether file is in workspace.
+    '''
+    from os.path import isfile
+    return isfile(filename + filetype)
+
+if __name__ != '__main__':
+    sys_exit()
+    
 import logging
 logger = logging.getLogger(__name__)
 fr = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
@@ -49,10 +63,8 @@ except ImportError:
         exit("Could not import arcpy 10.2.")
 logger.info('..import successful..')
 
-# Set workspace to avoid typing entire dir
-arcpy.env.workspace = getcwd()
-if getcwd() == r'H:\Desktop\assets':
-    arcpy.env.workspace = "H:/Desktop/assets/"
+# Set workspace
+arcpy.env.workspace = os_get_cwd()
 
 # Check for map
 cwd_files = arcpy.ListFiles()
@@ -102,9 +114,10 @@ for i in basemapdata:
 """
 
 # Check for fieldtrippoints.xlsx
+table_name = "fieldtrippoints"
 logger.info('..checking for fieldtrippoints..')
 # If excel version found
-if "fieldtrippoints.dbf" not in arcpy.ListTables() and isfile("fieldtrippoints.xlsx"):
+if "fieldtrippoints.dbf" not in arcpy.ListTables() and os_find_file(table_name, ".xlsx"):
     logger.info('..dbf not found, excel found, converting..')
     # Convert xlsx to dbf
     in_table = "fieldtrippoints.xlsx"
@@ -247,7 +260,7 @@ towns.visible = False
 
 # Can't georeference or digitize via script
 # Check for physiography.shp
-if isfile("physiography.shp"):
+if os_find_file("physiography", ".shp"):
     logger.info('..working with physiography..')
     # Add physio to new frame
     map_lyr_names = [i for i in arcpy.mapping.ListLayers(second_frame)]
