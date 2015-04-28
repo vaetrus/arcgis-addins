@@ -10,7 +10,6 @@
 # (4) ENSURE ALL FILES ARE IN THE SAME DIRECTORY AS THE SCRIPT
 
 from __future__ import print_function
-from sys import exit, path
 
 def os_get_cwd():
     ''' None -> str
@@ -24,6 +23,33 @@ def os_find_file(filename, filetype):
     '''
     from os.path import isfile
     return isfile(filename + filetype)
+
+def sys_append_paths(paths = []):
+    ''' None -> bool
+    '''
+    from sys import path
+    logger.info('..appending to sys.path..')
+    for i in dirs:
+        path.append(i)
+
+def sys_exit(message = ""):
+    ''' None -> None
+    '''
+    from sys import exit
+    exit(message)
+
+def arcpy_get_map(map_name = "", directory = ""):
+    ''' str, str -> mxd/None
+    Returns first object that contains map_name. If workspace is empty,
+    ArcPy workspace is used. If no map found, None returned.
+    '''
+    map_doc = None
+    dir = arcpy_get_workspace() if directory == "" else directory
+    for i in arcpy.ListFiles():
+        if i.endswith(".mxd"):
+            if map_name in i:
+                map_doc = arcpy.mapping.MapDocument(directory + "\\" + i)
+    return map_doc
 
 if __name__ != '__main__':
     sys_exit()
@@ -44,8 +70,8 @@ try:
     logger.info('..importing arcpy..')
     import arcpy
 except ImportError:
-    logger.warn('..import not successful..')
-    arcpy = ["C:/Program Files (x86)/ArcGIS/Desktop10.2/arcpy",
+    logger.warning('..could not import, appending to sys.path..')
+    dirs = ["C:/Program Files (x86)/ArcGIS/Desktop10.2/arcpy",
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/arcpy/arcpy",
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/bin",
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/scripts",
@@ -53,33 +79,25 @@ except ImportError:
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/ArcToolbox/Scripts",
              "C:/Python27/ArcGIS10.2/Lib/site-packages"]
     logger.info('..appending to sys.path..')
-    for i in arcpy:
-        path.append(i)
+    sys_append_paths(dirs)
     logger.info('..importing arcpy again..')
     try:
         import arcpy
     except:
         logger.info('..import not successful..')
-        exit("Could not import arcpy 10.2.")
+        sys_exit("Could not import arcpy 10.2.")
 logger.info('..import successful..')
 
 # Set workspace
 arcpy.env.workspace = os_get_cwd()
 
 # Check for map
-cwd_files = arcpy.ListFiles()
-for i in cwd_files:
-    if i.endswith(".mxd"):
-        mxd = arcpy.mapping.MapDocument(i)
-temp_workspace = "/".join(arcpy.env.workspace.split("/")[:-1])
-for i in temp_workspace:
-    if i.endswith(".mxd"):
-        mxd = arcpy.mapping.MapDocument(i)
-try:
-    mxd
-except NameError:
-    logger.error('..no map found..')
-    exit("No map was found. Please create a new map and save it in the same folder.")
+logger.info('..getting map document..')
+mxd = arcpy_get_map()
+
+if not mxd:
+    sys_exit("No map was found. Please create a new map and save it in\
+    the same folder.")
 
 # Names to ensure correct files
 names = [u'boundary.shp', u'contours.shp', u'places.shp', u'roads.shp',
@@ -94,7 +112,7 @@ basemapdata = [i for i in arcpy.ListFeatureClasses() if i in names]
 '''
 if len(basemapdata) != 7:
     logger.error('..not enough starting files..')
-    exit("There are files missing. Please extract basemapdata.zip fully.")
+    sys_exit("There are files missing. Please extract basemapdata.zip fully.")
 
 # Get first dataframe
 first_frame = arcpy.mapping.ListDataFrames(mxd)[0]
