@@ -31,6 +31,15 @@ def sys_exit(message = ""):
     from sys import exit
     exit(message)
 
+def arcpy_import():
+    ''' None -> bool
+    '''
+    try:
+        import arcpy
+    except ImportError:
+        arcpy = None
+    return arcpy
+
 def arcpy_get_map(map_name = "", directory = ""):
     ''' str, str -> mxd/None
     Returns first object that contains map_name. If workspace is empty,
@@ -54,15 +63,13 @@ sh = logging.StreamHandler()
 sh.setFormatter(fr)
 logger.addHandler(sh)
 
-if getcwd() == r'H:\Desktop\assets':
+if os_get_cwd() == r'H:\Desktop\assets':
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(35)
 
-try:
-    logger.info('..importing arcpy..')
-    import arcpy
-except ImportError:
+logger.info('..importing arcpy..')
+if not arcpy_import():
     logger.warning('..could not import, appending to sys.path..')
     dirs = ["C:/Program Files (x86)/ArcGIS/Desktop10.2/arcpy",
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/arcpy/arcpy",
@@ -71,18 +78,18 @@ except ImportError:
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/ArcToolbox",
              "C:/Program Files (x86)/ArcGIS/Desktop10.2/ArcToolbox/Scripts",
              "C:/Python27/ArcGIS10.2/Lib/site-packages"]
-    logger.info('..appending to sys.path..')
     sys_append_paths(dirs)
-    logger.info('..importing arcpy again..')
-    try:
-        import arcpy
-    except:
-        logger.info('..import not successful..')
-        sys_exit("Could not import arcpy 10.2.")
+
+logger.info('..trying again..')
+if not arcpy_import():
+    logger.error('..import not successful, could not import arcpy..')
+    sys_exit()
 logger.info('..import successful..')
+import arcpy
 
 # Set workspace
-arcpy.env.workspace = os_get_cwd()
+workspace = os_get_cwd() + "\\BasemapData"
+arcpy_set_workspace(workspace)
 
 # Check for map
 logger.info('..getting map document..')
